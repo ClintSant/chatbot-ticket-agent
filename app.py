@@ -16,32 +16,15 @@ st.caption("Assistente Unificada de Resolução e Atendimento")
 
 # ─────────────────────────────────────────────────────────
 # SCROLL AUTOMÁTICO PARA O FINAL DO CHAT
-# Injeta JS que força o scroll para baixo após cada rerun.
 # ─────────────────────────────────────────────────────────
 st.components.v1.html("""
 <script>
     function scrollToBottom() {
-        // Seleciona o container principal do Streamlit
-        const containers = window.parent.document.querySelectorAll(
-            'section.main > div[data-testid="stAppViewBlockContainer"]'
-        );
-        if (containers.length > 0) {
-            const last = containers[containers.length - 1];
-            last.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        }
         window.parent.scrollTo({ top: window.parent.document.body.scrollHeight, behavior: 'smooth' });
     }
-    // Aguarda o DOM carregar completamente antes de rolar
-    if (document.readyState === 'complete') {
-        scrollToBottom();
-    } else {
-        window.addEventListener('load', scrollToBottom);
-    }
-    // Tenta novamente após 300ms para garantir
     setTimeout(scrollToBottom, 300);
 </script>
 """, height=0)
-
 
 # ─────────────────────────────────────────────────────────
 # SESSION STATE
@@ -53,7 +36,7 @@ def msg_boas_vindas():
         "content": (
             "Olá! 👋 Eu sou a **AURA**, sua Assistente Unificada de Resolução e Atendimento.\n\n"
             "Estou aqui para registrar e encaminhar seu chamado da forma mais rápida possível.\n\n"
-            "Para começar, qual é o seu **nome**?"
+            "Para começar, qual é o seu **nome completo**?"
         )
     }
 
@@ -109,7 +92,7 @@ if st.session_state.etapa == "concluido":
         st.session_state.departamento = None
         st.session_state.mensagens.append({
             "role": "assistant",
-            "content": "Certo! Vamos abrir um novo chamado. 😊\n\nQual é o seu **nome**?"
+            "content": "Certo! Vamos abrir um novo chamado. 😊\n\nQual é o seu **nome completo**?"
         })
         st.rerun()
     if col2.button("✅ Encerrar atendimento", use_container_width=True, key="encerrar"):
@@ -126,7 +109,7 @@ if st.session_state.etapa == "concluido":
         st.rerun()
 
 # ─────────────────────────────────────────────────────────
-# BOTÃO REINICIAR (após encerrar)
+# BOTÃO REINICIAR
 # ─────────────────────────────────────────────────────────
 if st.session_state.etapa == "encerrado":
     if st.button("🔁 Iniciar novo atendimento", use_container_width=True, key="reiniciar"):
@@ -149,31 +132,51 @@ if st.session_state.etapa in etapas_com_input:
     entrada = st.chat_input("Digite sua mensagem...")
 
     if entrada:
-        st.session_state.mensagens.append({"role": "user", "content": entrada})
-        with st.chat_message("user"):
-            st.markdown(entrada)
-
+        texto = entrada.strip()
         resposta = ""
 
+        # ── Validação de campos obrigatórios ─────────────
+        campos_obrigatorios = ["aguardando_nome", "aguardando_setor", "aguardando_gestor"]
+        if st.session_state.etapa in campos_obrigatorios and not texto:
+            st.warning("⚠️ Este campo é obrigatório. Por favor, preencha antes de continuar.")
+            st.stop()
+
+        st.session_state.mensagens.append({"role": "user", "content": texto})
+        with st.chat_message("user"):
+            st.markdown(texto)
+
+        # ── Etapa 1: nome ─────────────────────────────────
         if st.session_state.etapa == "aguardando_nome":
-            nome = entrada.strip().split()[0].capitalize()
-            st.session_state.solicitante.nome = nome
-            st.session_state.etapa = "aguardando_setor"
-            resposta = f"Prazer, **{nome}**! 😊 Qual é o seu **setor** na empresa?"
+            if len(texto) < 2:
+                resposta = "Por favor, informe seu **nome completo** para continuarmos. 😊"
+            else:
+                nome = texto.split()[0].capitalize()
+                st.session_state.solicitante.nome = nome
+                st.session_state.etapa = "aguardando_setor"
+                resposta = f"Prazer, **{nome}**! 😊 Qual é o seu **setor** na empresa?"
 
+        # ── Etapa 2: setor ────────────────────────────────
         elif st.session_state.etapa == "aguardando_setor":
-            st.session_state.solicitante.setor = entrada.strip()
-            st.session_state.etapa = "aguardando_gestor"
-            nome = st.session_state.solicitante.nome
-            resposta = f"Anotado! Qual é o nome do seu **gestor imediato**, {nome}?"
+            if len(texto) < 2:
+                resposta = "Por favor, informe o **setor** onde você trabalha para continuarmos."
+            else:
+                st.session_state.solicitante.setor = texto
+                st.session_state.etapa = "aguardando_gestor"
+                nome = st.session_state.solicitante.nome
+                resposta = f"Anotado! Qual é o nome do seu **gestor imediato**, {nome}?"
 
+        # ── Etapa 3: gestor ───────────────────────────────
         elif st.session_state.etapa == "aguardando_gestor":
-            st.session_state.solicitante.gestor = entrada.strip()
-            st.session_state.etapa = "aguardando_email"
-            resposta = "Perfeito! Qual é o seu **e-mail** para contato?"
+            if len(texto) < 2:
+                resposta = "Por favor, informe o nome do seu **gestor imediato** para continuarmos."
+            else:
+                st.session_state.solicitante.gestor = texto
+                st.session_state.etapa = "aguardando_email"
+                resposta = "Perfeito! Qual é o seu **e-mail** para contato?"
 
+        # ── Etapa 4: email ────────────────────────────────
         elif st.session_state.etapa == "aguardando_email":
-            st.session_state.solicitante.email = entrada.strip()
+            st.session_state.solicitante.email = texto
             st.session_state.etapa = "aguardando_departamento"
             nome = st.session_state.solicitante.nome
             resposta = (
@@ -181,45 +184,49 @@ if st.session_state.etapa in etapas_com_input:
                 f"para o qual deseja encaminhar seu chamado:"
             )
 
+        # ── Etapa 5: descrição + processamento ───────────
         elif st.session_state.etapa == "aguardando_descricao":
-            with st.chat_message("assistant"):
-                with st.spinner("Analisando seu chamado..."):
-                    ticket = Ticket(
-                        solicitante=st.session_state.solicitante,
-                        departamento=st.session_state.departamento,
-                        descricao=entrada,
-                    )
-                    resultado = st.session_state.aura.processar(ticket)
+            if len(texto) < 10:
+                resposta = "Por favor, descreva o problema com mais detalhes para que possamos ajudá-lo melhor. 😊"
+            else:
+                with st.chat_message("assistant"):
+                    with st.spinner("Analisando seu chamado..."):
+                        ticket = Ticket(
+                            solicitante=st.session_state.solicitante,
+                            departamento=st.session_state.departamento,
+                            descricao=texto,
+                        )
+                        resultado = st.session_state.aura.processar(ticket)
 
-                if resultado.duplicado_de:
-                    resposta_final = resultado.resposta
-                else:
-                    emoji = {"alta": "🔴", "média": "🟡", "baixa": "🟢"}.get(resultado.gravidade, "⚪")
-                    resposta_final = (
-                        f"{resultado.resposta}\n\n"
-                        f"---\n"
-                        f"📋 **Resumo do chamado**\n"
-                        f"- **Protocolo:** `{resultado.protocolo}`\n"
-                        f"- **Solicitante:** {resultado.solicitante.nome} — {resultado.solicitante.setor}\n"
-                        f"- **Gestor:** {resultado.solicitante.gestor}\n"
-                        f"- **E-mail:** {resultado.solicitante.email}\n"
-                        f"- **Gravidade:** {emoji} {resultado.gravidade}\n"
-                        f"- **Departamento:** {resultado.departamento}\n"
-                        f"- **Encaminhado para:** {resultado.canal}\n"
-                        f"- **Sistema:** {resultado.sistema_afetado or '—'}\n"
-                        f"- **Erro:** {resultado.erro_detectado or '—'}"
-                    )
+                    if resultado.duplicado_de:
+                        resposta_final = resultado.resposta
+                    else:
+                        emoji = {"alta": "🔴", "média": "🟡", "baixa": "🟢"}.get(resultado.gravidade, "⚪")
+                        resposta_final = (
+                            f"{resultado.resposta}\n\n"
+                            f"---\n"
+                            f"📋 **Resumo do chamado**\n"
+                            f"- **Protocolo:** `{resultado.protocolo}`\n"
+                            f"- **Solicitante:** {resultado.solicitante.nome} — {resultado.solicitante.setor}\n"
+                            f"- **Gestor:** {resultado.solicitante.gestor}\n"
+                            f"- **E-mail:** {resultado.solicitante.email}\n"
+                            f"- **Gravidade:** {emoji} {resultado.gravidade}\n"
+                            f"- **Departamento:** {resultado.departamento}\n"
+                            f"- **Encaminhado para:** {resultado.canal}\n"
+                            f"- **Sistema:** {resultado.sistema_afetado or '—'}\n"
+                            f"- **Erro:** {resultado.erro_detectado or '—'}"
+                        )
 
-                st.markdown(resposta_final)
-                st.session_state.mensagens.append({"role": "assistant", "content": resposta_final})
+                    st.markdown(resposta_final)
+                    st.session_state.mensagens.append({"role": "assistant", "content": resposta_final})
 
-            followup = "Posso te ajudar com mais alguma coisa?"
-            st.session_state.mensagens.append({"role": "assistant", "content": followup})
-            with st.chat_message("assistant"):
-                st.markdown(followup)
+                followup = "Posso te ajudar com mais alguma coisa?"
+                st.session_state.mensagens.append({"role": "assistant", "content": followup})
+                with st.chat_message("assistant"):
+                    st.markdown(followup)
 
-            st.session_state.etapa = "concluido"
-            st.rerun()
+                st.session_state.etapa = "concluido"
+                st.rerun()
 
         if resposta:
             st.session_state.mensagens.append({"role": "assistant", "content": resposta})
@@ -227,3 +234,21 @@ if st.session_state.etapa in etapas_com_input:
                 st.markdown(resposta)
             if st.session_state.etapa == "aguardando_departamento":
                 st.rerun()
+
+# ─────────────────────────────────────────────────────────
+# BOTÃO "NÃO TENHO E-MAIL" — aparece apenas na etapa de email
+# ─────────────────────────────────────────────────────────
+if st.session_state.etapa == "aguardando_email":
+    if st.button("📧 Não tenho e-mail / Não sei informar agora", use_container_width=True, key="sem_email"):
+        email_ficticio = "suporte@aura.com.br"
+        st.session_state.solicitante.email = email_ficticio
+        st.session_state.etapa = "aguardando_departamento"
+        nome = st.session_state.solicitante.nome
+        resposta = (
+            f"Sem problemas, **{nome}**! 😊\n\n"
+            f"Para este chamado utilizaremos o e-mail de contato da equipe: "
+            f"**{email_ficticio}**\n\n"
+            f"Agora selecione o **departamento** para o qual deseja encaminhar seu chamado:"
+        )
+        st.session_state.mensagens.append({"role": "assistant", "content": resposta})
+        st.rerun()
