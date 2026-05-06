@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AURA — Assistente de Atendimento</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg-page:#0d0d0d;
+  --bg-chat:#1A1D21;
+  --bg-bubble-bot:#2a2d31;
+  --bg-bubble-user:linear-gradient(135deg,#6F42C1,#5a32a3);
+  --bg-input:#2a2d31;
+  --bg-btn:#2a2d31;
+  --text-primary:#f0f0f0;
+  --text-secondary:#aaaaaa;
+  --text-bubble-bot:#e9ecef;
+  --border:#3a3d41;
+  --accent1:#6F42C1;
+  --accent2:#17A2B8;
+  --shadow:rgba(0,0,0,0.5);
+}
+
+body.light {
+  --bg-page:#f0f2f5;
+  --bg-chat:#ffffff;
+  --bg-bubble-bot:#e9ecef;
+  --bg-bubble-user:linear-gradient(135deg,#007BFF,#0056b3);
+  --bg-input:#f8f9fa;
+  --bg-btn:#e9ecef;
+  --text-primary:#212529;
+  --text-secondary:#6c757d;
+  --text-bubble-bot:#212529;
+  --border:#dee2e6;
+  --accent1:#007BFF;
+  --accent2:#28A745;
+  --shadow:rgba(0,0,0,0.15);
+}
+
+body {
+  font-family:'Inter',sans-serif;
+  background:var(--bg-page);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  padding:20px;
+  transition:background .3s;
+}
+
+/* THEME TOGGLE */
+.theme-bar {
+  display:flex;
+  gap:8px;
+  margin-bottom:16px;
+}
+.tbtn {
+  padding:7px 18px;
+  border-radius:20px;
+  border:1.5px solid var(--border);
+  background:transparent;
+  color:var(--text-secondary);
+  font-size:13px;
+  font-family:'Inter',sans-serif;
+  cursor:pointer;
+  transition:all .2s;
+}
+.tbtn.active {
+  background:var(--accent1);
+  color:#fff;
+  border-color:var(--accent1);
+}
+
+/* CHAT CONTAINER */
+.chat {
+  width:100%;
+  max-width:680px;
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 24px 80px var(--shadow);
+  display:flex;
+  flex-direction:column;
+  height:620px;
+  background:var(--bg-chat);
+  transition:background .3s;
+}
+
+/* HEADER */
+.header {
+  padding:18px 22px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg-chat);
+}
+.av {
+  width:46px;height:46px;
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--accent1),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;flex-shrink:0;
+}
+.ht h1 {font-size:19px;font-weight:700;color:var(--text-primary);letter-spacing:-.3px}
+.ht p {font-size:11px;color:var(--text-secondary);margin-top:2px}
+.online {
+  margin-left:auto;
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text-secondary);
+}
+.dot {
+  width:8px;height:8px;border-radius:50%;
+  background:#28A745;
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* MESSAGES */
+.body {
+  flex:1;overflow-y:auto;
+  padding:20px 22px;
+  display:flex;flex-direction:column;gap:14px;
+  background:var(--bg-chat);
+}
+.body::-webkit-scrollbar{width:4px}
+.body::-webkit-scrollbar-thumb{background:var(--accent1);border-radius:4px;opacity:.5}
+
+.msg {display:flex;gap:10px;align-items:flex-end;animation:up .3s ease}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse}
+
+.mav {
+  width:32px;height:32px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+  background:var(--bg-bubble-bot);
+}
+.mav.user{background:var(--accent1)}
+
+.bubble {
+  max-width:74%;
+  padding:12px 16px;
+  border-radius:18px;
+  font-size:14px;line-height:1.6;
+  box-shadow:0 2px 8px var(--shadow);
+}
+.bubble.bot {
+  background:var(--bg-bubble-bot);
+  color:var(--text-bubble-bot);
+  border-bottom-left-radius:4px;
+}
+.bubble.user {
+  background:var(--bg-bubble-user);
+  color:#fff;
+  border-bottom-right-radius:4px;
+}
+
+/* TYPING */
+.typing {
+  display:flex;gap:4px;
+  padding:14px 18px;
+  border-radius:18px;
+  background:var(--bg-bubble-bot);
+  width:fit-content;
+}
+.typing span {
+  width:7px;height:7px;border-radius:50%;
+  background:var(--accent1);
+  display:inline-block;
+  animation:b .9s infinite;
+}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* DEPT BUTTONS */
+.depts {
+  display:flex;flex-wrap:wrap;gap:7px;
+  padding:8px 22px 14px;
+  background:var(--bg-chat);
+  border-top:1px solid var(--border);
+}
+.dbtn {
+  padding:8px 14px;
+  border-radius:20px;border:1.5px solid var(--border);
+  background:var(--bg-btn);color:var(--text-primary);
+  font-size:12px;font-family:'Inter',sans-serif;font-weight:500;
+  cursor:pointer;transition:all .2s;
+}
+.dbtn:hover {
+  background:var(--accent1);color:#fff;
+  border-color:var(--accent1);
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px var(--accent1)44;
+}
+
+/* ACTION BUTTONS */
+.actions {
+  display:flex;gap:8px;
+  padding:8px 22px 14px;
+  background:var(--bg-chat);
+  border-top:1px solid var(--border);
+}
+.abtn {
+  flex:1;padding:10px;
+  border-radius:12px;border:1.5px solid var(--border);
+  background:var(--bg-btn);color:var(--text-primary);
+  font-size:13px;font-family:'Inter',sans-serif;font-weight:500;
+  cursor:pointer;transition:all .2s;
+}
+.abtn:hover {background:var(--accent1);color:#fff;border-color:var(--accent1)}
+.abtn.primary {background:var(--accent1);color:#fff;border-color:var(--accent1)}
+
+/* NO EMAIL BUTTON */
+.no-email {
+  padding:6px 22px 10px;
+  background:var(--bg-chat);
+}
+.no-email button {
+  width:100%;padding:9px;
+  border-radius:12px;border:1.5px dashed var(--border);
+  background:transparent;color:var(--text-secondary);
+  font-size:12px;font-family:'Inter',sans-serif;
+  cursor:pointer;transition:all .2s;
+}
+.no-email button:hover{border-color:var(--accent1);color:var(--accent1)}
+
+/* INPUT */
+.inp-row {
+  padding:14px 18px;
+  display:flex;gap:10px;align-items:center;
+  border-top:1px solid var(--border);
+  background:var(--bg-chat);
+}
+.inp {
+  flex:1;padding:12px 18px;
+  border-radius:14px;
+  border:1.5px solid var(--border);
+  background:var(--bg-input);
+  color:var(--text-primary);
+  font-size:14px;font-family:'Inter',sans-serif;
+  outline:none;transition:border-color .2s;
+}
+.inp:focus{border-color:var(--accent1);box-shadow:0 0 0 3px var(--accent1)22}
+.inp::placeholder{color:var(--text-secondary)}
+.sbtn {
+  width:44px;height:44px;
+  border-radius:12px;border:none;
+  background:linear-gradient(135deg,var(--accent1),var(--accent2));
+  color:#fff;font-size:18px;
+  cursor:pointer;transition:all .2s;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.sbtn:hover{transform:scale(1.08)}
+
+/* RESUMO */
+.resumo {
+  background:var(--bg-bubble-bot);
+  border-radius:12px;
+  padding:12px 16px;
+  margin-top:8px;
+  font-size:13px;
+  line-height:1.8;
+  color:var(--text-bubble-bot);
+}
+.resumo strong{color:var(--accent1)}
+.tag {
+  display:inline-block;
+  padding:2px 8px;border-radius:10px;
+  font-size:11px;font-weight:600;
+  background:var(--accent1)22;color:var(--accent1);
+  margin-left:4px;
+}
+</style>
+</head>
+<body>
+
+<div class="theme-bar">
+  <button class="tbtn active" onclick="setTheme('dark')">🌙 Escuro</button>
+  <button class="tbtn" onclick="setThema('light')">☀️ Claro</button>
+</div>
+
+<div class="chat">
+  <div class="header">
+    <div class="av">🤖</div>
+    <div class="ht">
+      <h1>AURA</h1>
+      <p>Assistente Unificada de Resolução e Atendimento</p>
+    </div>
+    <div class="online"><div class="dot"></div>Online</div>
+  </div>
+
+  <div class="body" id="chat"></div>
+
+  <!-- Botões de departamento -->
+  <div class="depts" id="depts" style="display:none">
+    <button class="dbtn" onclick="escolherDept('TI / Sistemas')">💻 TI / Sistemas</button>
+    <button class="dbtn" onclick="escolherDept('Infraestrutura')">🔧 Infraestrutura</button>
+    <button class="dbtn" onclick="escolherDept('Financeiro')">💰 Financeiro</button>
+    <button class="dbtn" onclick="escolherDept('RH')">👥 RH</button>
+    <button class="dbtn" onclick="escolherDept('Segurança')">🔐 Segurança</button>
+    <button class="dbtn" onclick="escolherDept('Serviços Gerais')">🏢 Serviços Gerais</button>
+  </div>
+
+  <!-- Botão sem email -->
+  <div class="no-email" id="no-email" style="display:none">
+    <button onclick="semEmail()">📧 Não tenho e-mail / Não sei informar agora</button>
+  </div>
+
+  <!-- Botões pós-atendimento -->
+  <div class="actions" id="actions" style="display:none">
+    <button class="abtn" onclick="novoChamado()">🔄 Abrir novo chamado</button>
+    <button class="abtn primary" onclick="encerrar()">✅ Encerrar atendimento</button>
+  </div>
+
+  <!-- Input -->
+  <div class="inp-row" id="inp-row">
+    <input class="inp" id="inp" type="text" placeholder="Digite sua mensagem...">
+    <button class="sbtn" onclick="enviar()">➤</button>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────
+// Altere para a URL do seu backend no Render após o deploy
+const API_URL = "http://127.0.0.1:8000";
+
+// ─── ESTADO ───────────────────────────────────────────
+let etapa = "aguardando_nome";
+let solicitante = {nome:"", setor:"", gestor:"", email:""};
+let departamento = "";
+
+// ─── TEMA ─────────────────────────────────────────────
+function setTheme(t) {
+  document.body.className = t === 'light' ? 'light' : '';
+  document.querySelectorAll('.tbtn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+// Fix typo in light button
+document.querySelectorAll('.tbtn')[1].onclick = function() { setTheme('light'); this.classList.add('active'); document.querySelectorAll('.tbtn')[0].classList.remove('active'); };
+
+// ─── MENSAGENS ────────────────────────────────────────
+function addMsg(role, html) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `<div class="mav ${role}">${role==='bot'?'🤖':'👤'}</div><div class="bubble ${role}">${html}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showTyping() {
+  const chat = document.getElementById('chat');
+  const t = document.createElement('div');
+  t.className = 'msg bot'; t.id = 'typing';
+  t.innerHTML = `<div class="mav bot">🤖</div><div class="typing"><span></span><span></span><span></span></div>`;
+  chat.appendChild(t);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing');
+  if(t) t.remove();
+}
+
+function botResponde(html, delay=600) {
+  showTyping();
+  setTimeout(() => { hideTyping(); addMsg('bot', html); }, delay);
+}
+
+// ─── CONTROLE DE UI ───────────────────────────────────
+function showInput(show) { document.getElementById('inp-row').style.display = show ? 'flex' : 'none'; }
+function showDepts(show) { document.getElementById('depts').style.display = show ? 'flex' : 'none'; }
+function showNoEmail(show) { document.getElementById('no-email').style.display = show ? 'block' : 'none'; }
+function showActions(show) { document.getElementById('actions').style.display = show ? 'flex' : 'none'; }
+
+// ─── FLUXO ────────────────────────────────────────────
+function iniciar() {
+  botResponde(
+    'Olá! 👋 Eu sou a <strong>AURA</strong>, sua Assistente Unificada de Resolução e Atendimento.<br><br>' +
+    'Estou aqui para registrar e encaminhar seu chamado da forma mais rápida possível.<br><br>' +
+    'Para começar, qual é o seu <strong>nome completo</strong>?'
+  );
+}
+
+function enviar() {
+  const inp = document.getElementById('inp');
+  const texto = inp.value.trim();
+  if(!texto) return;
+  inp.value = '';
+  addMsg('user', texto);
+  processarEntrada(texto);
+}
+
+function processarEntrada(texto) {
+  if(etapa === 'aguardando_nome') {
+    if(texto.length < 2) { botResponde('Por favor, informe seu <strong>nome completo</strong> para continuarmos. 😊'); return; }
+    solicitante.nome = texto.split(' ')[0];
+    solicitante.nome = solicitante.nome.charAt(0).toUpperCase() + solicitante.nome.slice(1).toLowerCase();
+    etapa = 'aguardando_setor';
+    botResponde(`Prazer, <strong>${solicitante.nome}</strong>! 😊 Qual é o seu <strong>setor</strong> na empresa?`);
+
+  } else if(etapa === 'aguardando_setor') {
+    if(texto.length < 2) { botResponde('Por favor, informe o <strong>setor</strong> onde você trabalha.'); return; }
+    solicitante.setor = texto;
+    etapa = 'aguardando_gestor';
+    botResponde(`Anotado! Qual é o nome do seu <strong>gestor imediato</strong>, ${solicitante.nome}?`);
+
+  } else if(etapa === 'aguardando_gestor') {
+    if(texto.length < 2) { botResponde('Por favor, informe o nome do seu <strong>gestor imediato</strong>.'); return; }
+    solicitante.gestor = texto;
+    etapa = 'aguardando_email';
+    showNoEmail(true);
+    botResponde(`Perfeito! Qual é o seu <strong>e-mail</strong> para contato?`);
+
+  } else if(etapa === 'aguardando_email') {
+    solicitante.email = texto;
+    showNoEmail(false);
+    irParaDepartamento();
+
+  } else if(etapa === 'aguardando_descricao') {
+    if(texto.length < 10) { botResponde('Por favor, descreva o problema com mais detalhes para que possamos ajudá-lo melhor. 😊'); return; }
+    processarChamado(texto);
+  }
+}
+
+function semEmail() {
+  solicitante.email = 'suporte@aura.com.br';
+  showNoEmail(false);
+  addMsg('user', 'Não tenho e-mail no momento');
+  botResponde(
+    `Sem problemas, <strong>${solicitante.nome}</strong>! 😊<br><br>` +
+    `Para este chamado utilizaremos o e-mail da equipe: <strong>suporte@aura.com.br</strong>`
+  );
+  setTimeout(() => irParaDepartamento(), 1200);
+}
+
+function irParaDepartamento() {
+  etapa = 'aguardando_departamento';
+  showInput(false);
+  botResponde(`Ótimo, <strong>${solicitante.nome}</strong>! Agora selecione o <strong>departamento</strong>:`);
+  setTimeout(() => showDepts(true), 800);
+}
+
+function escolherDept(dep) {
+  departamento = dep;
+  showDepts(false);
+  showInput(true);
+  etapa = 'aguardando_descricao';
+  addMsg('user', dep);
+  botResponde(
+    `Entendido! Você selecionou <strong>${dep}</strong>. 👍<br><br>` +
+    `Agora descreva sua demanda com o máximo de detalhes — pode mencionar o sistema afetado, o que está acontecendo e há quanto tempo.`
+  );
+}
+
+async function processarChamado(descricao) {
+  showInput(false);
+  showTyping();
+
+  try {
+    const res = await fetch(`${API_URL}/chamado`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        solicitante: solicitante,
+        departamento: departamento,
+        descricao: descricao
+      })
+    });
+
+    const data = await res.json();
+    hideTyping();
+
+    if(data.duplicado_de) {
+      addMsg('bot', `⚠️ <strong>${solicitante.nome}</strong>, esse problema já foi registrado no protocolo <strong>${data.duplicado_de}</strong>.<br><br>Você será acompanhado pela mesma tratativa!`);
+    } else {
+      const emoji = {alta:'🔴', média:'🟡', baixa:'🟢'}[data.gravidade] || '⚪';
+      const resumo = `
+        <div>${data.resposta}</div>
+        <div class="resumo">
+          📋 <strong>Resumo do chamado</strong><br>
+          <strong>Protocolo:</strong> <span class="tag">${data.protocolo}</span><br>
+          <strong>Solicitante:</strong> ${solicitante.nome} — ${solicitante.setor}<br>
+          <strong>Gestor:</strong> ${solicitante.gestor}<br>
+          <strong>E-mail:</strong> ${solicitante.email}<br>
+          <strong>Gravidade:</strong> ${emoji} ${data.gravidade}<br>
+          <strong>Departamento:</strong> ${departamento}<br>
+          <strong>Encaminhado para:</strong> ${data.canal}<br>
+          <strong>Sistema:</strong> ${data.sistema_afetado || '—'}<br>
+          <strong>Erro:</strong> ${data.erro_detectado || '—'}
+        </div>
+      `;
+      addMsg('bot', resumo);
+    }
+
+    setTimeout(() => {
+      addMsg('bot', `Posso te ajudar com mais alguma coisa, <strong>${solicitante.nome}</strong>?`);
+      showActions(true);
+      etapa = 'concluido';
+    }, 800);
+
+  } catch(err) {
+    hideTyping();
+    addMsg('bot', '⚠️ Ocorreu um erro ao processar seu chamado. Por favor, tente novamente em instantes.');
+    showInput(true);
+    etapa = 'aguardando_descricao';
+  }
+}
+
+function novoChamado() {
+  showActions(false);
+  etapa = 'aguardando_nome';
+  solicitante = {nome:'', setor:'', gestor:'', email:''};
+  departamento = '';
+  showInput(true);
+  botResponde('Certo! Vamos abrir um novo chamado. 😊<br><br>Qual é o seu <strong>nome completo</strong>?');
+}
+
+function encerrar() {
+  showActions(false);
+  showInput(false);
+  botResponde(
+    `Obrigada pelo contato, <strong>${solicitante.nome}</strong>! 😊<br><br>` +
+    `Seu chamado está registrado e nossa equipe entrará em contato no e-mail <strong>${solicitante.email}</strong> em breve.<br><br>` +
+    `Tenha um ótimo dia! 👋`
+  );
+  setTimeout(() => {
+    const chat = document.getElementById('chat');
+    const div = document.createElement('div');
+    div.style.cssText = 'text-align:center;padding:16px';
+    div.innerHTML = `<button class="dbtn" onclick="reiniciar()" style="padding:10px 24px">🔁 Iniciar novo atendimento</button>`;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }, 1500);
+}
+
+function reiniciar() {
+  document.getElementById('chat').innerHTML = '';
+  etapa = 'aguardando_nome';
+  solicitante = {nome:'', setor:'', gestor:'', email:''};
+  departamento = '';
+  showInput(true);
+  showDepts(false);
+  showNoEmail(false);
+  showActions(false);
+  iniciar();
+}
+
+// ─── INIT ─────────────────────────────────────────────
+document.getElementById('inp').addEventListener('keydown', e => { if(e.key === 'Enter') enviar(); });
+iniciar();
+</script>
+</body>
+</html>
